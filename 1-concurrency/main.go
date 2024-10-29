@@ -12,12 +12,16 @@ func main() {
 	resCh := make(chan int, numCount)
 	var wg sync.WaitGroup
 
-	go createRandomSlice(numCount, initialCh)
-
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
+		defer wg.Done()
+		createRandomSlice(numCount, initialCh)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		pow(numCount, initialCh, resCh)
-		wg.Done()
 	}()
 
 	wg.Wait()
