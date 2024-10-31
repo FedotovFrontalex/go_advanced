@@ -31,7 +31,7 @@ func (handler *AuthHandler) login() http.HandlerFunc {
 			Token: os.Getenv("TOKEN"),
 		}
 		
-		response.Json(w, 200, result)
+		response.Json(w, result, 200)
 	}
 }
 
