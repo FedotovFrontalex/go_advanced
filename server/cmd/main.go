@@ -4,16 +4,24 @@ import (
 	"net/http"
 	"server/configs"
 	"server/internal/auth"
+	"server/internal/link"
 	"server/pkg/db"
 	"server/pkg/logger"
 )
 
 func main() {
 	conf := configs.LoadConfig()
-	_ = db.NewDb(conf)
+	database := db.NewDb(conf)
 	router := http.NewServeMux()
+
+	linkRepository := link.NewLinkRepository(database)
+
 	auth.NewAuthHandler(router, auth.AuthHandlerDeps{
 		Config: conf,
+	})
+	link.NewLinkHandler(router, link.LinkHandlerDeps{
+		Config:         conf,
+		LinkRepository: linkRepository,
 	})
 
 	server := http.Server{
