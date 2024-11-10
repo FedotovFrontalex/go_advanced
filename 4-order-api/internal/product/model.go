@@ -12,9 +12,10 @@ type Product struct {
 	Images      pq.StringArray `json:"images" gorm:"type:varchar[]"`
 }
 
-func NewProduct(name string, description string) *Product {
+func NewProduct(name string, description string, images pq.StringArray) *Product {
 	return &Product{
 		Name:        name,
 		Description: description,
+		Images:      images,
 	}
 }

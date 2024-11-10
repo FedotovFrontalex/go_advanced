@@ -11,13 +11,19 @@ import (
 func main() {
 	logger.Message("initialize server start")
 	conf := configs.Load()
-	_ = db.NewDb(conf)
+	database := db.NewDb(conf)
 	router := http.NewServeMux()
-	logger.Message("initialize routes")
 
+	logger.Message("initialize repositories")
+	productRepository := product.NewProductRepository(database)
+
+	logger.Message("initialize routes")
 	product.NewProductHandler(
 		router,
-		&product.ProductHandlerDeps{Config: conf},
+		&product.ProductHandlerDeps{
+			Config:            conf,
+			ProductRepository: productRepository,
+		},
 	)
 
 	server := http.Server{
