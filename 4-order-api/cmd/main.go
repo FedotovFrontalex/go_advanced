@@ -6,6 +6,7 @@ import (
 	"orderApi/internal/product"
 	"orderApi/pkg/db"
 	"orderApi/pkg/logger"
+	"orderApi/pkg/middleware"
 )
 
 func main() {
@@ -26,9 +27,14 @@ func main() {
 		},
 	)
 
+	middlewareChain := middleware.Chain(
+		middleware.CORS,
+		middleware.Log,
+	)
+
 	server := http.Server{
 		Addr:    ":8081",
-		Handler: router,
+		Handler: middlewareChain(router),
 	}
 
 	logger.Message("Starting server on port 8081")
