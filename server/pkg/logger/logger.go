@@ -6,6 +6,17 @@ func Error(err error) {
 	color.Red(err.Error())
 }
 
+func Log(logData ...any) {
+	c := color.New(color.FgBlue)
+	for i, v := range logData {
+		if i == len(logData)-1 {
+			c.Println(v)
+		} else {
+			c.Print(v, " ")
+		}
+	}
+}
+
 func Message(message any) {
 	c := color.New(color.FgCyan)
 	c.Println(message)
