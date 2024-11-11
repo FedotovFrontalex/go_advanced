@@ -7,6 +7,7 @@ import (
 	"server/internal/link"
 	"server/pkg/db"
 	"server/pkg/logger"
+	"server/pkg/middleware"
 )
 
 func main() {
@@ -24,9 +25,14 @@ func main() {
 		LinkRepository: linkRepository,
 	})
 
+	stack := middleware.Chain(
+		middleware.CORS,
+		middleware.Logging,
+	)
+
 	server := http.Server{
 		Addr:    ":8081",
-		Handler: router,
+		Handler: stack(router),
 	}
 
 	logger.Message("Starting server on 8081 port")
