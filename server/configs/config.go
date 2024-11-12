@@ -25,15 +25,15 @@ func LoadConfig() *Config {
 	err := godotenv.Load()
 
 	if err != nil {
-		logger.Error(errors.New("Error loading .env file, using default config"))
+		logger.Error(errors.New("error loading .env file, using default config"))
 	}
 
 	return &Config{
 		Db: DbConfig{
 			Dsn: os.Getenv("DSN"),
 		},
-		Auth: AuthConfig {
-				Secret: os.Getenv("TOKEN"),
+		Auth: AuthConfig{
+			Secret: os.Getenv("SECRET"),
 		},
 	}
 }
