@@ -3,7 +3,9 @@ package main
 import (
 	"net/http"
 	"orderApi/configs"
+	"orderApi/internal/auth"
 	"orderApi/internal/product"
+	"orderApi/internal/user"
 	"orderApi/pkg/db"
 	"orderApi/pkg/logger"
 	"orderApi/pkg/middleware"
@@ -17,6 +19,13 @@ func main() {
 
 	logger.Message("initialize repositories")
 	productRepository := product.NewProductRepository(database)
+	userRepository := user.NewUserRepository(database)
+
+	logger.Message("initialize services")
+	authService := auth.NewAuthService(&auth.AuthServiceDeps{
+		Config:         conf,
+		UserRepository: userRepository,
+	})
 
 	logger.Message("initialize routes")
 	product.NewProductHandler(
@@ -24,6 +33,14 @@ func main() {
 		&product.ProductHandlerDeps{
 			Config:            conf,
 			ProductRepository: productRepository,
+		},
+	)
+
+	auth.NewAuthHandler(
+		router,
+		auth.AuthHandlerDeps{
+			Config:      conf,
+			AuthService: authService,
 		},
 	)
 

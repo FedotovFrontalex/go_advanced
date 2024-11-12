@@ -1,12 +1,14 @@
 package main
 
 import (
+	"orderApi/internal/product"
+	"orderApi/internal/user"
+	"orderApi/pkg/logger"
+	"os"
+
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"orderApi/internal/product"
-	"orderApi/pkg/logger"
-	"os"
 )
 
 func main() {
@@ -23,7 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	db.AutoMigrate(&product.Product{})
+	db.AutoMigrate(&product.Product{}, &user.User{})
 
 	logger.Success("Migration end")
 }
