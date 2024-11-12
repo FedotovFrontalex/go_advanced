@@ -5,6 +5,7 @@ import (
 	"server/configs"
 	"server/internal/auth"
 	"server/internal/link"
+	"server/internal/user"
 	"server/pkg/db"
 	"server/pkg/logger"
 	"server/pkg/middleware"
@@ -16,10 +17,15 @@ func main() {
 	router := http.NewServeMux()
 
 	linkRepository := link.NewLinkRepository(database)
+	userRepository := user.NewUserRepository(database)
+
+	authService := auth.NewAuthService(userRepository)
 
 	auth.NewAuthHandler(router, auth.AuthHandlerDeps{
-		Config: conf,
+		Config:      conf,
+		AuthService: authService,
 	})
+
 	link.NewLinkHandler(router, link.LinkHandlerDeps{
 		Config:         conf,
 		LinkRepository: linkRepository,
