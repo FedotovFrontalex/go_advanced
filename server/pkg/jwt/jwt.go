@@ -10,15 +10,19 @@ type JWT struct {
 	Secret string
 }
 
+type JWTData struct {
+	Email string
+}
+
 func NewJWT(secret string) *JWT {
 	return &JWT{
 		Secret: secret,
 	}
 }
 
-func (j *JWT) Create(email string) (string, error) {
+func (j *JWT) Create(data JWTData) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": email,
+		"email": data.Email,
 	})
 	logger.Log("Secret: ", j.Secret)
 	s, err := token.SignedString([]byte(j.Secret))
