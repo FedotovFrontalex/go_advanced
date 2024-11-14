@@ -13,6 +13,7 @@ type Config struct {
 	Db              DbConfig
 	SessionIdLength int
 	Auth            AuthConfig
+	Security        SecurityConfig
 }
 
 type DbConfig struct {
@@ -21,6 +22,10 @@ type DbConfig struct {
 
 type AuthConfig struct {
 	Secret string
+}
+
+type SecurityConfig struct {
+	Domains string
 }
 
 func Load() *Config {
@@ -35,16 +40,37 @@ func Load() *Config {
 	logger.Message(sessionIdLength)
 
 	if err != nil {
-		logger.Error(errors.New("failed to parse session_id length from env. Use 20 by default"))
+		logger.Error(errors.New(ErrNoSessionIdLength))
 		sessionIdLength = 20
+	}
+
+	dsn := os.Getenv("DSN")
+
+	if dsn == "" {
+		panic(ErrNoDSN)
+	}
+
+	secret := os.Getenv("SECRET")
+
+	if secret == "" {
+		logger.Error(errors.New(ErrNoSecret))
+	}
+
+	domains := os.Getenv("DOMAINS")
+
+	if domains == "" {
+		logger.Error(errors.New(ErrNoDomains))
 	}
 
 	return &Config{
 		Db: DbConfig{
-			Dsn: os.Getenv("DSN"),
+			Dsn: dsn,
 		},
 		Auth: AuthConfig{
-			Secret: os.Getenv("SECRET"),
+			Secret: secret,
+		},
+		Security: SecurityConfig{
+			Domains: domains,
 		},
 		SessionIdLength: int(sessionIdLength),
 	}

@@ -45,7 +45,7 @@ func main() {
 	)
 
 	middlewareChain := middleware.Chain(
-		middleware.CORS,
+		middleware.InitCors(conf.Security),
 		middleware.Log,
 	)
 
