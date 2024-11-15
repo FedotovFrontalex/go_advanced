@@ -31,13 +31,21 @@ func NewProductHandler(router *http.ServeMux, deps ProductHandlerDeps) {
 
 	router.Handle("POST /product", middleware.IsAuthed(handler.CreateProduct(), deps.Config))
 	router.Handle("PATCH /product/{id}", middleware.IsAuthed(handler.UpdateProduct(), deps.Config))
+	router.Handle("DELETE /product/{id}", middleware.IsAuthed(handler.DeleteProduct(), deps.Config))
 	router.HandleFunc("/product/{id}", handler.GetProductById())
-	router.HandleFunc("DELETE /product/{id}", handler.DeleteProduct())
 }
 
 func (handler *ProductHandler) CreateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("Add product")
+
+		_, ok := req.Context().Value(middleware.ContextSessionIdKey).(string)
+
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
 		body, err := request.HandleBody[ProductCreateRequest](&w, req)
 
 		if err != nil {
@@ -62,6 +70,13 @@ func (handler *ProductHandler) CreateProduct() http.HandlerFunc {
 func (handler *ProductHandler) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("UpdateProduct")
+
+		_, ok := req.Context().Value(middleware.ContextSessionIdKey).(string)
+
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 
 		idString := req.PathValue("id")
 		id, err := strconv.ParseUint(idString, 10, 32)
@@ -106,6 +121,13 @@ func (handler *ProductHandler) UpdateProduct() http.HandlerFunc {
 func (handler *ProductHandler) DeleteProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("DeleteProduct")
+
+		_, ok := req.Context().Value(middleware.ContextSessionIdKey).(string)
+
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 
 		idString := req.PathValue("id")
 		id, err := strconv.ParseUint(idString, 10, 32)
