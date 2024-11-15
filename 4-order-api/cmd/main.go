@@ -30,7 +30,7 @@ func main() {
 	logger.Message("initialize routes")
 	product.NewProductHandler(
 		router,
-		&product.ProductHandlerDeps{
+		product.ProductHandlerDeps{
 			Config:            conf,
 			ProductRepository: productRepository,
 		},

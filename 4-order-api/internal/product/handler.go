@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"orderApi/configs"
 	"orderApi/pkg/logger"
+	"orderApi/pkg/middleware"
 	"orderApi/pkg/request"
 	"orderApi/pkg/response"
 	"strconv"
@@ -21,15 +22,15 @@ type ProductHandler struct {
 	ProductRepository *ProductRepository
 }
 
-func NewProductHandler(router *http.ServeMux, conf *ProductHandlerDeps) {
+func NewProductHandler(router *http.ServeMux, deps ProductHandlerDeps) {
 	logger.Message("initialize routes: product")
-	handler := ProductHandler{
-		Config:            conf.Config,
-		ProductRepository: conf.ProductRepository,
+	handler := &ProductHandler{
+		Config:            deps.Config,
+		ProductRepository: deps.ProductRepository,
 	}
 
-	router.HandleFunc("POST /product", handler.CreateProduct())
-	router.HandleFunc("PATCH /product/{id}", handler.UpdateProduct())
+	router.Handle("POST /product", middleware.IsAuthed(handler.CreateProduct(), deps.Config))
+	router.Handle("PATCH /product/{id}", middleware.IsAuthed(handler.UpdateProduct(), deps.Config))
 	router.HandleFunc("/product/{id}", handler.GetProductById())
 	router.HandleFunc("DELETE /product/{id}", handler.DeleteProduct())
 }

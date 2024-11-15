@@ -69,7 +69,10 @@ func (handler *AuthHandler) VerifyAuth() http.HandlerFunc {
 		}
 
 		jwtService := jwt.NewJWT(handler.Config.Auth.Secret)
-		token, err := jwtService.Create(user.SessionId, user.Phone)
+		token, err := jwtService.Create(jwt.JWTData{
+			Phone:     user.Phone,
+			SessionId: user.SessionId,
+		})
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
