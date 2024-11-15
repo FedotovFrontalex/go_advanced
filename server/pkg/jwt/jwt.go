@@ -33,3 +33,19 @@ func (j *JWT) Create(data JWTData) (string, error) {
 
 	return s, nil
 }
+
+func (j *JWT) Parse(token string) (bool, *JWTData) {
+	t, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		return []byte(j.Secret), nil
+	})
+
+	if err != nil {
+		return false, nil
+	}
+
+	email := t.Claims.(jwt.MapClaims)["email"]
+
+	return t.Valid, &JWTData{
+		Email: email.(string),
+	}
+}

@@ -28,15 +28,23 @@ func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
 		LinkRepository: deps.LinkRepository,
 	}
 
-	router.Handle("/link/{hash}", middleware.IsAuthed(handler.Get()))
-	router.Handle("POST /link", middleware.IsAuthed(handler.Create()))
-	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update()))
-	router.Handle("DELETE /link/{id}", middleware.IsAuthed(handler.Delete()))
+	router.Handle("/link/{hash}", middleware.IsAuthed(handler.Get(), deps.Config))
+	router.Handle("POST /link", middleware.IsAuthed(handler.Create(), deps.Config))
+	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), deps.Config))
+	router.Handle("DELETE /link/{id}", middleware.IsAuthed(handler.Delete(), deps.Config))
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("LinkHandler: Create")
+
+		_, ok := req.Context().Value(middleware.ContextEmailKey).(string)
+
+		if !ok {
+			http.Error(w, ErrNoAuthorized, http.StatusUnauthorized)
+			return
+		}
+
 		body, err := request.HandleBody[LinkCreateRequest](&w, req)
 		if err != nil {
 			response.Json(w, err.Error(), 402)
