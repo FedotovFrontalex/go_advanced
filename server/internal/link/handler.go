@@ -3,6 +3,7 @@ package link
 import (
 	"net/http"
 	"server/configs"
+	"server/pkg/event"
 	"server/pkg/logger"
 	"server/pkg/middleware"
 	"server/pkg/request"
@@ -15,23 +16,27 @@ import (
 type LinkHandlerDeps struct {
 	*configs.Config
 	LinkRepository *LinkRepository
+	EventBus       *event.EventBys
 }
 
 type LinkHandler struct {
 	*configs.Config
 	LinkRepository *LinkRepository
+	EventBus       *event.EventBys
 }
 
 func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
 	handler := &LinkHandler{
 		Config:         deps.Config,
 		LinkRepository: deps.LinkRepository,
+		EventBus:       deps.EventBus,
 	}
 
 	router.Handle("/link/{hash}", middleware.IsAuthed(handler.Get(), deps.Config))
 	router.Handle("POST /link", middleware.IsAuthed(handler.Create(), deps.Config))
 	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), deps.Config))
 	router.Handle("DELETE /link/{id}", middleware.IsAuthed(handler.Delete(), deps.Config))
+	router.Handle("/link", middleware.IsAuthed(handler.GetAll(), deps.Config))
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc {
@@ -154,6 +159,44 @@ func (handler *LinkHandler) Get() http.HandlerFunc {
 			return
 		}
 
+		go handler.EventBus.Publish(event.Event{
+			Type: event.EventLinkVisited,
+			Data: link.ID,
+		})
 		http.Redirect(w, req, link.Url, http.StatusTemporaryRedirect)
+	}
+}
+
+func (handler *LinkHandler) GetAll() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		limit := req.URL.Query().Get("limit")
+		offset := req.URL.Query().Get("offset")
+
+		logger.Log("limit: ", limit)
+
+		limitInt, err := strconv.Atoi(limit)
+
+		if err != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+			return
+		}
+
+		offsetInt, err := strconv.Atoi(offset)
+
+		if err != nil {
+			http.Error(w, "invalid offset", http.StatusBadRequest)
+			return
+		}
+
+		count := handler.LinkRepository.Count()
+
+		links := handler.LinkRepository.GetAll(limitInt, offsetInt)
+
+		linksResponse := &LinkGetAllResponse{
+			Links: links,
+			Count: count,
+		}
+
+		response.Json(w, linksResponse, 200)
 	}
 }
