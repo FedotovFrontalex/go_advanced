@@ -3,30 +3,38 @@ package product
 import (
 	"net/http"
 	"orderApi/configs"
+	apierrors "orderApi/pkg/apiErrors"
 	"orderApi/pkg/logger"
 	"orderApi/pkg/middleware"
 	"orderApi/pkg/request"
 	"orderApi/pkg/response"
 	"strconv"
 
-	"gorm.io/gorm"
+	"github.com/lib/pq"
 )
+
+type ProductServiceInterface interface {
+	CreateProduct(string, string, pq.StringArray) (*Product, *apierrors.Error)
+	UpdateProduct(uint, string, string, pq.StringArray) (*Product, *apierrors.Error)
+	DeleteProduct(uint) *apierrors.Error
+	GetProductById(uint) (*Product, *apierrors.Error)
+}
 
 type ProductHandlerDeps struct {
 	*configs.Config
-	ProductRepository *ProductRepository
+	ProductService ProductServiceInterface
 }
 
 type ProductHandler struct {
 	*configs.Config
-	ProductRepository *ProductRepository
+	ProductService ProductServiceInterface
 }
 
 func NewProductHandler(router *http.ServeMux, deps ProductHandlerDeps) {
 	logger.Message("initialize routes: product")
 	handler := &ProductHandler{
-		Config:            deps.Config,
-		ProductRepository: deps.ProductRepository,
+		Config:         deps.Config,
+		ProductService: deps.ProductService,
 	}
 
 	router.Handle("POST /product", middleware.IsAuthed(handler.CreateProduct(), deps.Config))
@@ -54,16 +62,14 @@ func (handler *ProductHandler) CreateProduct() http.HandlerFunc {
 			return
 		}
 
-		product := NewProduct(body.Name, body.Description, body.Images)
-		result, err := handler.ProductRepository.Create(product)
+		product, apierr := handler.ProductService.CreateProduct(body.Name, body.Description, body.Images)
 
-		if err != nil {
-			logger.Error(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if apierr != nil {
+			http.Error(w, apierr.Error(), apierr.GetStatus())
 			return
 		}
 
-		response.Json(w, result, 201)
+		response.Json(w, product, 201)
 	}
 }
 
@@ -78,8 +84,7 @@ func (handler *ProductHandler) UpdateProduct() http.HandlerFunc {
 			return
 		}
 
-		idString := req.PathValue("id")
-		id, err := strconv.ParseUint(idString, 10, 32)
+		id, err := strconv.ParseUint(req.PathValue("id"), 10, 32)
 
 		if err != nil {
 			logger.Error(err)
@@ -95,26 +100,14 @@ func (handler *ProductHandler) UpdateProduct() http.HandlerFunc {
 			return
 		}
 
-		_, err = handler.ProductRepository.GetProductById(uint(id))
+		product, apierr := handler.ProductService.UpdateProduct(uint(id), body.Name, body.Description, body.Images)
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if apierr != nil {
+			http.Error(w, apierr.Error(), apierr.GetStatus())
 			return
 		}
 
-		result, err := handler.ProductRepository.Update(&Product{
-			Model:       gorm.Model{ID: uint(id)},
-			Name:        body.Name,
-			Description: body.Description,
-			Images:      body.Images,
-		})
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		response.Json(w, result, 201)
+		response.Json(w, product, 201)
 	}
 }
 
@@ -129,8 +122,7 @@ func (handler *ProductHandler) DeleteProduct() http.HandlerFunc {
 			return
 		}
 
-		idString := req.PathValue("id")
-		id, err := strconv.ParseUint(idString, 10, 32)
+		id, err := strconv.ParseUint(req.PathValue("id"), 10, 32)
 
 		if err != nil {
 			logger.Error(err)
@@ -138,17 +130,10 @@ func (handler *ProductHandler) DeleteProduct() http.HandlerFunc {
 			return
 		}
 
-		_, err = handler.ProductRepository.GetProductById(uint(id))
+		apierr := handler.ProductService.DeleteProduct(uint(id))
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		err = handler.ProductRepository.Delete(uint(id))
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if apierr != nil {
+			http.Error(w, apierr.Error(), apierr.GetStatus())
 			return
 		}
 
@@ -169,13 +154,13 @@ func (handler *ProductHandler) GetProductById() http.HandlerFunc {
 			return
 		}
 
-		result, err := handler.ProductRepository.GetProductById(uint(id))
+		product, apierr := handler.ProductService.GetProductById(uint(id))
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+		if apierr != nil {
+			http.Error(w, apierr.Error(), apierr.GetStatus())
 			return
 		}
 
-		response.Json(w, result, 200)
+		response.Json(w, product, 200)
 	}
 }

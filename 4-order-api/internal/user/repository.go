@@ -47,6 +47,7 @@ func (repo *UserRepository) FindByPhone(phone string) (*User, error) {
 
 func (repo *UserRepository) FindBySessionId(sessionId string) (*User, error) {
 	var user User
+
 	result := repo.Database.DB.First(&user, "session_id=?", sessionId)
 
 	if result.Error != nil {
