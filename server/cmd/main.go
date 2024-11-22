@@ -13,7 +13,7 @@ import (
 	"server/pkg/middleware"
 )
 
-func main() {
+func App() http.Handler {
 	conf := configs.LoadConfig()
 	database := db.NewDb(conf)
 	router := http.NewServeMux()
@@ -45,17 +45,23 @@ func main() {
 		StatRepository: statRepository,
 	})
 
+	go statService.AddClick()
+
 	stack := middleware.Chain(
 		middleware.CORS,
 		middleware.Logging,
 	)
 
+	return stack(router)
+}
+
+func main() {
+	app := App()
+
 	server := http.Server{
 		Addr:    ":8081",
-		Handler: stack(router),
+		Handler: app,
 	}
-
-	go statService.AddClick()
 
 	logger.Message("Starting server on 8081 port")
 	err := server.ListenAndServe()
