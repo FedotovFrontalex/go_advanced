@@ -25,11 +25,11 @@ func NewAuthHandler(router *http.ServeMux, deps AuthHandlerDeps) {
 		AuthService: deps.AuthService,
 	}
 
-	router.HandleFunc("POST /auth/login", handler.login())
-	router.HandleFunc("POST /auth/register", handler.register())
+	router.HandleFunc("POST /auth/login", handler.Login())
+	router.HandleFunc("POST /auth/register", handler.Register())
 }
 
-func (handler *AuthHandler) login() http.HandlerFunc {
+func (handler *AuthHandler) Login() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("login")
 
@@ -66,7 +66,7 @@ func (handler *AuthHandler) login() http.HandlerFunc {
 	}
 }
 
-func (handler *AuthHandler) register() http.HandlerFunc {
+func (handler *AuthHandler) Register() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger.Message("register")
 
@@ -99,6 +99,6 @@ func (handler *AuthHandler) register() http.HandlerFunc {
 			Token: token,
 		}
 
-		response.Json(w, responseData, http.StatusOK)
+		response.Json(w, responseData, 201)
 	}
 }
