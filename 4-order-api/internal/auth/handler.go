@@ -3,19 +3,26 @@ package auth
 import (
 	"net/http"
 	"orderApi/configs"
+	"orderApi/internal/user"
+	apierrors "orderApi/pkg/apiErrors"
 	"orderApi/pkg/jwt"
 	"orderApi/pkg/request"
 	"orderApi/pkg/response"
 )
 
+type AuthServiceInterface interface {
+	CreateSession(string) (string, error)
+	VerifySession(string, int) (*user.User, *apierrors.Error)
+}
+
 type AuthHandlerDeps struct {
 	*configs.Config
-	*AuthService
+	AuthService AuthServiceInterface
 }
 
 type AuthHandler struct {
 	*configs.Config
-	*AuthService
+	AuthService AuthServiceInterface
 }
 
 func NewAuthHandler(router *http.ServeMux, deps AuthHandlerDeps) {
@@ -33,7 +40,6 @@ func (handler *AuthHandler) Auth() http.HandlerFunc {
 		body, err := request.HandleBody[AuthRequest](&w, req)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -48,7 +54,7 @@ func (handler *AuthHandler) Auth() http.HandlerFunc {
 			SessionId: sessionId,
 		}
 
-		response.Json(w, responseData, 201)
+		response.Json(w, responseData, 200)
 	}
 }
 
@@ -61,10 +67,10 @@ func (handler *AuthHandler) VerifyAuth() http.HandlerFunc {
 			return
 		}
 
-		user, err := handler.AuthService.VerifySession(body.SessionId, body.Code)
+		user, apierr := handler.AuthService.VerifySession(body.SessionId, body.Code)
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if apierr != nil {
+			http.Error(w, apierr.Error(), apierr.GetStatus())
 			return
 		}
 

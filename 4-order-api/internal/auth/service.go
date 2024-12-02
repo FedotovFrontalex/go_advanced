@@ -2,82 +2,75 @@ package auth
 
 import (
 	"errors"
+	"net/http"
 	"orderApi/configs"
 	"orderApi/internal/user"
+	apierrors "orderApi/pkg/apiErrors"
 	"orderApi/pkg/logger"
 )
 
+type UserServiceInterface interface {
+	FindUserByPhone(string) (*user.User, *apierrors.Error)
+	CreateUser(string) (*user.User, *apierrors.Error)
+	UpdateUser(*user.User) (*user.User, *apierrors.Error)
+	FindBySessionId(string) (*user.User, *apierrors.Error)
+}
+
 type AuthServiceDeps struct {
 	*configs.Config
-	UserRepository *user.UserRepository
+	UserService UserServiceInterface
 }
 
 type AuthService struct {
-	UserRepository  *user.UserRepository
+	UserService     UserServiceInterface
 	SessionIdLength int
 }
 
 func NewAuthService(deps *AuthServiceDeps) *AuthService {
 	return &AuthService{
-		UserRepository:  deps.UserRepository,
+		UserService:     deps.UserService,
 		SessionIdLength: deps.Config.SessionIdLength,
 	}
 }
 
 func (service *AuthService) CreateSession(phone string) (string, error) {
-	existedUser, _ := service.UserRepository.FindByPhone(phone)
-
-	var userData *user.User
+	existedUser, _ := service.UserService.FindUserByPhone(phone)
 
 	if existedUser == nil {
-		userData = user.NewUser(phone)
-	} else {
-		userData = existedUser
-	}
+		user, apierr := service.UserService.CreateUser(phone)
 
-	for {
-		userData.CreateSessionId(service.SessionIdLength)
-		userWithSameSessionId, _ := service.UserRepository.FindBySessionId(userData.SessionId)
-
-		if userWithSameSessionId == nil {
-			break
-		}
-	}
-
-	if existedUser == nil {
-		user, err := service.UserRepository.Create(userData)
-
-		if err != nil {
-			return "", err
-		}
-
-		return user.SessionId, nil
-	} else {
-		user, err := service.UserRepository.Update(userData)
-
-		if err != nil {
-			return "", nil
+		if apierr != nil {
+			return "", apierrors.NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		}
 
 		return user.SessionId, nil
 	}
+
+	existedUser.CreateSessionId(service.SessionIdLength)
+	user, apierr := service.UserService.UpdateUser(existedUser)
+
+	if apierr != nil {
+		return "", apierrors.NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+	}
+
+	return user.SessionId, nil
 }
 
-func (service *AuthService) VerifySession(sessionId string, code int) (*user.User, error) {
-	user, err := service.UserRepository.FindBySessionId(sessionId)
+func (service *AuthService) VerifySession(sessionId string, code int) (*user.User, *apierrors.Error) {
+	user, err := service.UserService.FindBySessionId(sessionId)
 
 	if err != nil {
-		return nil, errors.New(ErrFailedCheckSession)
+		return nil, apierrors.NewError(http.StatusBadRequest, ErrFailedCheckSession)
 	}
 
 	if code != 1111 {
 		user.SessionId = " "
-		_, err = service.UserRepository.Update(user)
+		_, err = service.UserService.UpdateUser(user)
 
 		if err != nil {
 			logger.Error(errors.New(ErrFailedClearSession))
 		}
-		return nil, errors.New(ErrFailedCheckSession)
+		return nil, apierrors.NewError(http.StatusBadRequest, ErrFailedCheckSession)
 	}
 
 	return user, nil

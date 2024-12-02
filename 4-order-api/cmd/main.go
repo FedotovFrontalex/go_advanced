@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"orderApi/configs"
 	"orderApi/internal/auth"
+	"orderApi/internal/order"
 	"orderApi/internal/product"
 	"orderApi/internal/user"
 	"orderApi/pkg/db"
@@ -11,8 +12,7 @@ import (
 	"orderApi/pkg/middleware"
 )
 
-func main() {
-	logger.Message("initialize server start")
+func App() http.Handler {
 	conf := configs.Load()
 	database := db.NewDb(conf)
 	router := http.NewServeMux()
@@ -20,19 +20,28 @@ func main() {
 	logger.Message("initialize repositories")
 	productRepository := product.NewProductRepository(database)
 	userRepository := user.NewUserRepository(database)
+	orderRepository := order.NewOrderRepository(database)
 
 	logger.Message("initialize services")
-	authService := auth.NewAuthService(&auth.AuthServiceDeps{
+	userService := user.NewUserService(&user.UserServiceDeps{
 		Config:         conf,
 		UserRepository: userRepository,
+	})
+	authService := auth.NewAuthService(&auth.AuthServiceDeps{
+		Config:      conf,
+		UserService: userService,
+	})
+	productService := product.NewProductService(productRepository)
+	orderService := order.NewOrderService(&order.OrderServiceDeps{
+		OrderRepository: orderRepository,
 	})
 
 	logger.Message("initialize routes")
 	product.NewProductHandler(
 		router,
 		product.ProductHandlerDeps{
-			Config:            conf,
-			ProductRepository: productRepository,
+			Config:         conf,
+			ProductService: productService,
 		},
 	)
 
@@ -44,14 +53,31 @@ func main() {
 		},
 	)
 
-	middlewareChain := middleware.Chain(
+	order.NewOrderHandler(
+		router,
+		order.OrderHandlerDeps{
+			Config:         conf,
+			OrderService:   orderService,
+			UserService:    userService,
+			ProductService: productService,
+		},
+	)
+
+	stack := middleware.Chain(
 		middleware.InitCors(conf.Security),
 		middleware.Log,
 	)
 
+	return stack(router)
+}
+
+func main() {
+	logger.Message("initialize server start")
+	app := App()
+
 	server := http.Server{
 		Addr:    ":8081",
-		Handler: middlewareChain(router),
+		Handler: app,
 	}
 
 	logger.Message("Starting server on port 8081")
