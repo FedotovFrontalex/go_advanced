@@ -40,7 +40,6 @@ func (handler *AuthHandler) Auth() http.HandlerFunc {
 		body, err := request.HandleBody[AuthRequest](&w, req)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -55,7 +54,7 @@ func (handler *AuthHandler) Auth() http.HandlerFunc {
 			SessionId: sessionId,
 		}
 
-		response.Json(w, responseData, 201)
+		response.Json(w, responseData, 200)
 	}
 }
 

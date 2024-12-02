@@ -12,8 +12,7 @@ import (
 	"orderApi/pkg/middleware"
 )
 
-func main() {
-	logger.Message("initialize server start")
+func App() http.Handler {
 	conf := configs.Load()
 	database := db.NewDb(conf)
 	router := http.NewServeMux()
@@ -64,14 +63,21 @@ func main() {
 		},
 	)
 
-	middlewareChain := middleware.Chain(
+	stack := middleware.Chain(
 		middleware.InitCors(conf.Security),
 		middleware.Log,
 	)
 
+	return stack(router)
+}
+
+func main() {
+	logger.Message("initialize server start")
+	app := App()
+
 	server := http.Server{
 		Addr:    ":8081",
-		Handler: middlewareChain(router),
+		Handler: app,
 	}
 
 	logger.Message("Starting server on port 8081")
